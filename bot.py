@@ -18,6 +18,8 @@ import discord
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from dotenv import load_dotenv
+import re
+from ai import search_cv
 
 from database import DatabaseManager
 
@@ -68,7 +70,7 @@ It is recommended to use slash commands and therefore not use prefix commands.
 
 If you want to use prefix commands, make sure to also enable the intent below in the Discord developer portal.
 """
-# intents.message_content = True
+intents.message_content = True
 
 # Setup both of the loggers
 
@@ -210,7 +212,20 @@ class DiscordBot(commands.Bot):
         """
         if message.author == self.user or message.author.bot:
             return
-        await self.process_commands(message)
+        x = re.search(r"<.*> cv", message.content)
+        if x:
+            await self.process_commands(message)
+        else:
+            words = message.content.split(" ")[1:]
+            query = " ".join(words)
+            print(query)
+            if len(query) < 3:
+                return
+            search_result = search_cv(query=query)
+            ctx = await self.get_context(message)
+            description = search_result["summary"]["summaryText"]
+            embed = discord.Embed(title=query, description=description)
+            await ctx.send(embed=embed, mention_author=True)
 
     async def on_command_completion(self, context: Context) -> None:
         """
